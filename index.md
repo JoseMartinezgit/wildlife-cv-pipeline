@@ -18,12 +18,12 @@ The initial model evaluation maintained strict isolation between camera location
 
 To demonstrate the impact of spatial data isolation, an experiment was conducted where a balanced dataset of 25,000 images was randomly shuffled before the validation split. The performance immediately skyrocketed to over 98 percent accuracy.
 
-![Confusion Matrix Showing Data Leakage](Results/ConfusionMatrix.png)
+![Confusion Matrix Showing Data Leakage](results/ConfusionMatrix.png)
 
 ## Understanding Data Leakage
 This massive jump in accuracy is a textbook example of data leakage. By randomly shuffling the dataset, images from the exact same camera trap ended up in both the training and validation sets. The ResNet18 model did not suddenly become better at identifying the animals. Instead, it memorized the static backgrounds of the camera traps. When tested on the validation set, it simply recognized the trees and shadows it had already seen during training.
 
-![Validation Set Visualizer Grid](Results/Results1.png)
+![Validation Set Visualizer Grid](results/Results1.png)
 
 ## Conclusion
 This project illustrates a fundamental principle in Software Engineering and Systems design: a machine learning model is only as robust as its data pipeline. Achieving high accuracy on a validation set is meaningless if the data splits do not reflect deployment conditions. For remote sensing and spatial datasets, strict separation of physical locations is non negotiable to ensure true generalization.
