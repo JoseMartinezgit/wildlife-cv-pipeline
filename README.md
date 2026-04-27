@@ -116,9 +116,9 @@ The visualization step selected a batch of validation images, passed them throug
 
 ![Validation Set Visualizer Grid](results/Results1.png)
 
-This visualization made the evaluation more interpretable. Instead of only seeing an accuracy number, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
+![Validation Set Visualizer Grid](results/Results3.png)
 
-The visualizer was also useful for debugging. If the model made mistakes, this grid could help reveal whether the error was understandable. For example, some animals may appear very small, partially hidden, or difficult to distinguish from the background. Looking at examples directly gives more context than metrics alone.
+This visualization made the evaluation more interpretable. Instead of only seeing an accuracy number, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
 
 ## Results
 
