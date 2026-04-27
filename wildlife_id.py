@@ -30,24 +30,25 @@ with open(ANNOTATIONS_FILE, 'r') as f:
 df_images = pd.DataFrame(train_meta['images'])
 df_annotations = pd.DataFrame(train_meta['annotations'])
 df_categories = pd.DataFrame(train_meta['categories'])
-
+df_merged = df_images.merge(
+    df_annotations,
+    left_on="id",
+    right_on="image_id",
+    how="inner"
+)
 # MVP: Keep only the top 5 most common species
-top_5_classes = df_merged['category_id'].value_counts().nlargest(5).index
 
-# Filter the dataset to only include those top 5 animals
-df_final = df_merged[df_merged['category_id'].isin(top_5_classes)].reset_index(drop=True)
 
-# Grab 5,000 images per class (25,000 total images)
-df_final = df_final.groupby('category_id').head(5000).reset_index(drop=True)
+NUM_CLASSES = 15
+MAX_IMAGES_PER_CLASS = 3000
 
-unique_classes = df_final['category_id'].unique()
-class_to_idx = {cat_id: idx for idx, cat_id in enumerate(unique_classes)}
-df_final['label'] = df_final['category_id'].map(class_to_idx)
+top_classes = df_merged['category_id'].value_counts().nlargest(NUM_CLASSES).index
 
-# MVP- Keep only the top 5 most common species so it trains before Thursday
-top_5_classes = df_merged['category_id'].value_counts().nlargest(5).index
+df_final = df_merged[df_merged['category_id'].isin(top_classes)].reset_index(drop=True)
 
-unique_classes = df_final['category_id'].unique()
+df_final = df_final.groupby('category_id').sample(n=3000, replace=True).reset_index(drop=True)
+
+unique_classes = sorted(df_final['category_id'].unique())
 class_to_idx = {cat_id: idx for idx, cat_id in enumerate(unique_classes)}
 df_final['label'] = df_final['category_id'].map(class_to_idx)
 
@@ -55,7 +56,7 @@ df_final['label'] = df_final['category_id'].map(class_to_idx)
 category_dict = dict(zip(df_categories['id'], df_categories['name']))
 class_names = [category_dict[cat_id] for cat_id in unique_classes]
 
-print(f"Successfully loaded {len(df_final)} images across 5 classes: {class_names}")
+print(f"Successfully loaded {len(df_final)} images across {len(unique_classes)} classes: {class_names}")
 
 # 3. Custom PyTorch Dataset
 class IWildCamDataset(Dataset):
@@ -79,12 +80,22 @@ class IWildCamDataset(Dataset):
 
         return image, label
 
-data_transforms = transforms.Compose([
-    transforms.Resize((224, 224)),
+train_transforms = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.RandomResizedCrop(224, scale=(0.75, 1.0)),
     transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=0.5, contrast=0.5), 
+    transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
+    transforms.RandomRotation(10),
     transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    transforms.Normalize([0.485, 0.456, 0.406],
+                         [0.229, 0.224, 0.225])
+])
+
+val_transforms = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406],
+                         [0.229, 0.224, 0.225])
 ])
 
 # Data Loading & Class Imbalance Handling
@@ -94,8 +105,8 @@ train_size = int(0.8 * len(df_final))
 df_train = df_final.iloc[:train_size].reset_index(drop=True)
 df_val = df_final.iloc[train_size:].reset_index(drop=True)
 
-train_dataset = IWildCamDataset(df_train, IMAGES_DIR, transform=data_transforms)
-val_dataset = IWildCamDataset(df_val, IMAGES_DIR, transform=data_transforms)
+train_dataset = IWildCamDataset(df_train, IMAGES_DIR, transform=train_transforms)
+val_dataset = IWildCamDataset(df_val, IMAGES_DIR, transform=val_transforms)
 
 class_counts = df_train['label'].value_counts().sort_index().values
 class_weights = 1. / class_counts
@@ -122,23 +133,31 @@ dataloaders = {
 }
 
 # Model Setup & Training Loop
-model = models.resnet18(weights='IMAGENET1K_V1')
+model = models.efficientnet_b0(weights='IMAGENET1K_V1')
+
 for param in model.parameters():
     param.requires_grad = False
 
-num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, len(unique_classes)) 
-model = model.to(device)
+num_ftrs = model.classifier[1].in_features
+model.classifier[1] = nn.Linear(num_ftrs, len(unique_classes))
 
-# Unfreeze the last convolutional block so it learns animal features
-for param in model.layer4.parameters():
+# Unfreeze the last few EfficientNet blocks
+for param in model.features[-3:].parameters():
     param.requires_grad = True
 
-# Update the optimizer to include these newly unfrozen parameters
-optimizer = optim.Adam([
-    {'params': model.layer4.parameters(), 'lr': 1e-4}, 
-    {'params': model.fc.parameters(), 'lr': 1e-3}
-])
+model = model.to(device)
+
+optimizer = optim.AdamW([
+    {'params': model.features[-3:].parameters(), 'lr': 1e-4},
+    {'params': model.classifier.parameters(), 'lr': 1e-3}
+], weight_decay=1e-4)
+
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode='max',
+    factor=0.5,
+    patience=2
+)
 
 # Convert your existing class_weights numpy array to a PyTorch tensor
 weights_tensor = torch.FloatTensor(class_weights).to(device)
@@ -172,10 +191,15 @@ for epoch in range(num_epochs):
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
-
+            
         epoch_loss = running_loss / len(dataloaders[phase].dataset)
         epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+        
         print(f'{phase.capitalize()} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+        
+        if phase == 'val':
+            scheduler.step(epoch_acc.item())
+                
 
 # Evaluation for the Blog
 print("\nEvaluating on Validation Set...")
