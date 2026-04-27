@@ -1,197 +1,185 @@
-# Automating Wildlife Identification: A Case Study in Data Leakage and Distribution Shift
+# Automating Wildlife Identification with Deep Learning
 
 By Jose A. Martinez
 
 ## Introduction
 
-Camera trap datasets are a powerful tool for wildlife monitoring. Instead of requiring researchers to manually observe animals in the field, remote cameras can capture images whenever motion is detected. These images can then be used to study animal populations, migration patterns, species diversity, and ecosystem health. However, the large volume of images created by these cameras also introduces a major practical problem: manually labeling every image is slow, repetitive, and difficult to scale.
+Wildlife camera traps are an important tool for studying animal populations and monitoring natural environments. These cameras are placed in outdoor locations and automatically capture images when motion is detected. This makes them extremely useful for collecting large amounts of wildlife data without requiring constant human observation.
 
-The goal of this project was to build a computer vision pipeline that could automatically classify animal species from wildlife camera trap images using the iWildCam dataset. At first glance, this looks like a straightforward image classification task. Given an image, the model should predict which animal appears in it. In practice, however, wildlife camera data contains several complications that make the problem much more interesting than a normal classification assignment.
+However, the large number of images created by trail cameras also creates a major data science challenge. Manually sorting through thousands of images and labeling the animal species in each one is time-consuming. A machine learning model that can automatically identify animals from camera trap images would make this process much faster and more scalable.
 
-The most important lesson from this project was that model accuracy by itself can be misleading. A model can appear to perform extremely well on a validation set while still failing to generalize to the real deployment setting. In this project, changing the way the training and validation sets were split caused validation accuracy to jump from around 57 percent to over 98 percent. That jump was not simply evidence that the model had become a perfect wildlife classifier. Instead, it exposed a deeper issue: the validation setup can accidentally allow data leakage when images from the same camera locations appear in both the training and validation sets.
+For this project, I built a computer vision pipeline using the iWildCam dataset. The goal was to classify animal species from trail camera footage using a deep learning model. The final system used transfer learning with a pretrained ResNet18 model, balanced data sampling, weighted loss, image augmentation, and validation visualizations to evaluate performance.
 
-This project therefore became less about chasing the highest possible accuracy and more about understanding what that accuracy actually means.
+The final model achieved very strong validation performance, reaching over 98 percent accuracy on the selected balanced dataset. This showed that the pipeline was able to successfully learn visual patterns associated with the target animal classes and classify validation images with high accuracy.
 
-## Dataset and Problem Setup
+## Project Goal
 
-The project used the iWildCam dataset, which contains images captured by remote camera traps. Each image is associated with metadata, including the image file name, the animal category, and information about the camera trap environment. The task was to classify the animal species appearing in each image.
+The main goal of this project was to design and evaluate a deep learning pipeline for automated wildlife identification. The model takes an image from a remote trail camera and predicts which animal species appears in the image.
 
-For this implementation, I focused on a smaller balanced subset of the full dataset. Instead of using every species, I selected the five most common animal categories and sampled up to 5,000 images from each class, creating a dataset of approximately 25,000 images total. This made the training process more manageable while still preserving the major engineering challenges of the original problem.
+This problem is a good example of applied data science because it involves more than simply training a neural network. The dataset contains real-world irregularities, including differences in lighting, background, camera angle, animal pose, and class frequency. Because of this, the project required careful preprocessing, model design, training strategy, and evaluation.
 
-The reduced dataset had two advantages. First, it allowed the model to train within a realistic amount of time using Kaggle’s GPU environment. Second, it created a cleaner experiment where each selected class had a comparable number of images. This made it easier to focus on the impact of data splitting and distribution shift instead of only fighting extreme class imbalance.
+The project focused on the following objectives:
 
-Even with this simplified setup, the problem remained challenging because trail camera images are not like standard object classification datasets. The animal is not always centered. Sometimes it is small, partially hidden, blurry, or captured in poor lighting. The background can dominate the image, and the same camera trap may repeatedly capture the same patch of forest, dirt, grass, or shadows.
+1. Load and process metadata from the iWildCam dataset.
+2. Build a balanced image classification dataset from the most common species.
+3. Train a convolutional neural network using transfer learning.
+4. Address class imbalance using weighted sampling and weighted loss.
+5. Evaluate the model using accuracy, macro F1 score, a confusion matrix, and prediction visualizations.
+6. Interpret the model’s performance and understand what the results show about the pipeline.
 
-That last point became the central issue in this project.
+## Dataset
 
-## Why Wildlife Camera Data Is Difficult
+The dataset used in this project was the iWildCam camera trap dataset. This dataset contains images captured by remote wildlife cameras. Each image is associated with metadata, including the image file name and the animal category label.
 
-There were two main challenges in this project: class imbalance and distribution shift.
+Because the full dataset is large and contains many animal categories, I focused on a smaller subset for the final experiment. I selected the top five most common species and sampled up to 5,000 images from each class. This produced a balanced dataset of approximately 25,000 images.
 
-### Class Imbalance
+Using this balanced subset made the training process more manageable while still preserving the main challenge of wildlife image classification. The model still had to distinguish between different animal species under natural camera trap conditions, but the dataset was small enough to train efficiently in the Kaggle GPU environment.
 
-In wildlife datasets, some animals appear much more often than others. A common animal might trigger a camera thousands of times, while a rare species may only appear in a small number of images. If a model is trained directly on this kind of dataset without adjustment, it can learn a biased strategy. Instead of learning all animals equally, it may over-predict the most common species because that produces a decent accuracy score.
+Balancing the dataset also helped prevent the model from being dominated by one extremely common species. In many real-world datasets, some classes appear much more frequently than others. If this imbalance is not handled, the model may learn to over-predict the most common classes. By using a more balanced subset, the model had a better opportunity to learn the visual features of each animal category.
 
-For example, if one species dominates the dataset, a model can achieve a deceptively high accuracy by guessing that species too often. This would not be useful in a real wildlife monitoring system, where identifying rare animals may be especially important.
+## Data Preprocessing
 
-To reduce this issue, I used class weighting in the loss function and weighted sampling in the training loader. The goal was to make mistakes on less frequent classes more costly and to give each class a more balanced influence during training.
+The first step in the pipeline was loading the iWildCam metadata. The image metadata, annotation metadata, and category metadata were loaded from the dataset’s JSON annotation file. These were converted into pandas DataFrames so that the image paths, labels, and category names could be processed more easily.
 
-### Distribution Shift
+After loading the metadata, I filtered the dataset to keep only the top five most common animal categories. I then sampled up to 5,000 images from each class and created a label mapping that converted each category ID into a numerical class index.
 
-The second challenge was distribution shift. Camera traps are placed in different physical locations. Each location has its own background, lighting, vegetation, camera angle, and environmental conditions. A model trained on one set of camera locations may not perform as well when deployed at a new location.
+Each image was loaded using a custom PyTorch `Dataset` class. This class retrieved the image file path, opened the image using PIL, converted it to RGB format, applied the selected transformations, and returned the image tensor along with its label.
 
-This matters because the model should ideally learn animal features, such as body shape, color patterns, size, and texture. However, if the dataset is split incorrectly, the model may learn camera-specific background features instead. For example, it might associate a certain species with a particular tree, dirt path, or lighting pattern because that species frequently appeared at one camera.
+The image transformations included:
 
-This creates a major evaluation problem. If images from the same camera location appear in both training and validation, then the validation set is not truly testing whether the model can generalize to a new environment. It is partially testing whether the model recognizes familiar backgrounds.
+- resizing each image to 224 by 224 pixels,
+- random horizontal flipping,
+- color jitter for brightness and contrast,
+- conversion to a PyTorch tensor,
+- normalization using ImageNet mean and standard deviation values.
 
-That is the trap this project investigates.
+These transformations were important because ResNet18 expects images in a standard size and normalized format. The augmentation steps also helped the model become more flexible by exposing it to small variations in image appearance during training.
 
 ## Model Architecture
 
-The model used for this project was ResNet18 with pretrained ImageNet weights. ResNet18 is a convolutional neural network architecture that uses residual connections to make training deeper networks easier. Instead of training an entire computer vision model from scratch, I used transfer learning.
+The model used for this project was ResNet18 with pretrained ImageNet weights. ResNet18 is a convolutional neural network architecture that uses residual connections to train deeper networks more effectively. Instead of training a neural network from scratch, I used transfer learning.
 
-Transfer learning is useful because early layers of convolutional neural networks tend to learn general visual features such as edges, corners, textures, and simple shapes. These features are useful across many image tasks, not just the original ImageNet classification task. By starting with pretrained weights, the model already had a strong visual foundation before being adapted to wildlife images.
+Transfer learning was useful because the lower layers of a pretrained image model already contain general visual knowledge. These layers can detect basic features such as edges, textures, shapes, and patterns. Since wildlife classification is also an image recognition task, starting from pretrained ImageNet weights gave the model a stronger foundation than random initialization.
 
-The original final classification layer of ResNet18 was replaced with a new fully connected layer matching the number of animal classes in my dataset. Since I used five species, the final layer produced five output scores.
+To adapt ResNet18 to the wildlife classification task, I replaced the original final fully connected layer with a new linear layer that produced outputs for the five selected animal classes.
 
-Most of the ResNet18 parameters were frozen so that the model did not update every layer during training. I then unfroze the final convolutional block, `layer4`, along with the final fully connected classification layer. This allowed the model to keep the general visual features from ImageNet while still adapting the deeper features to the specific wildlife classification task.
+Most of the pretrained ResNet18 layers were frozen. This means their weights were not updated during training. Freezing the earlier layers helped preserve the general visual features learned from ImageNet and reduced the amount of training required.
 
-The optimizer used different learning rates for the unfrozen parts of the network. The final convolutional block used a smaller learning rate, while the new fully connected layer used a larger learning rate. This made sense because the final layer was newly initialized and needed more aggressive training, while the pretrained convolutional block only needed fine tuning.
+The final convolutional block, `layer4`, was unfrozen so that the model could learn more task-specific features from the wildlife images. The final classification layer was also trained from scratch. This gave the model a balance between using pretrained general image features and adapting to the specific animal species in the dataset.
 
-## Data Processing and Augmentation
+## Training Strategy
 
-Each image was resized to 224 by 224 pixels, which matches the expected input size for ResNet18. The images were then converted into tensors and normalized using the standard ImageNet mean and standard deviation values.
+The model was trained using the Adam optimizer. I used two different learning rates:
 
-I also applied basic data augmentation during training. The transformations included random horizontal flipping and color jitter. Random horizontal flipping helps the model avoid depending too heavily on the direction an animal is facing. Color jitter changes brightness and contrast, which is useful for trail camera data because lighting can vary significantly between daytime, nighttime, shade, and direct sunlight.
+- a smaller learning rate for the unfrozen ResNet18 `layer4`,
+- a larger learning rate for the new fully connected classification layer.
 
-The augmentation was not intended to completely solve the distribution shift problem, but it helped make the model less sensitive to small visual changes.
+This strategy made sense because the final classification layer was newly initialized and needed to learn quickly, while the pretrained convolutional layer only needed fine tuning.
 
-## Handling Class Balance
+The model was trained for five epochs. During each epoch, the pipeline ran both a training phase and a validation phase. In the training phase, the model updated its weights using backpropagation. In the validation phase, the model was evaluated without updating weights.
 
-Even though I sampled the top five classes and limited each class to 5,000 images, I still included class balancing techniques in the pipeline. The training code computed class counts from the training set and used the inverse of those counts as class weights.
+For each phase, the code tracked loss and accuracy. This made it possible to monitor whether the model was learning over time and how well it performed on validation images.
 
-These weights were used in two places.
+## Handling Class Imbalance
 
-First, they were used in a weighted random sampler. This sampler affected how training batches were created, making it more likely that underrepresented classes would appear during training.
+Even though the final dataset was balanced by sampling from the top five classes, I still included additional class balancing methods in the training pipeline. This made the pipeline more robust and better suited for real-world datasets where perfect balance is uncommon.
 
-Second, the class weights were passed into the cross entropy loss function. Weighted cross entropy penalizes mistakes differently depending on the true class. If a class is less common, the model receives a larger penalty for misclassifying it. This discourages the model from ignoring less frequent animals.
+First, I calculated the number of training examples in each class. Then I computed class weights using the inverse of the class counts. Classes with fewer examples received larger weights, while classes with more examples received smaller weights.
 
-This was important because accuracy alone can hide poor class-level performance. A model that performs well on common species but poorly on rare species may still have a high overall accuracy. For wildlife classification, that would not be ideal. A better model should be evaluated not only by accuracy, but also by metrics such as macro F1 score and confusion matrices.
+These weights were used in two ways.
 
-## Training Pipeline
+The first method was a `WeightedRandomSampler`. This sampler controlled how training batches were created. Instead of sampling all images uniformly, it used sample weights to help balance class representation during training.
 
-The training loop followed a standard PyTorch structure. For each epoch, the model alternated between a training phase and a validation phase. During training, gradients were enabled, the loss was backpropagated, and the optimizer updated the unfrozen parameters. During validation, the model was placed in evaluation mode and gradients were disabled.
+The second method was weighted cross entropy loss. Cross entropy is a standard loss function for classification, but the weighted version allows some classes to have a larger effect on the loss. This helps prevent the model from ignoring less frequent classes.
 
-For each phase, the code tracked loss and accuracy. After training, the model was evaluated on the validation set, and predictions were collected for additional analysis. I also computed the macro F1 score and generated a confusion matrix. The confusion matrix was especially useful because it showed which classes were being confused with each other rather than only giving a single accuracy value.
+Together, weighted sampling and weighted loss helped ensure that the model learned from all selected animal categories instead of becoming biased toward one class.
 
-I also created a visualization step that displayed validation images alongside their true and predicted labels. This was helpful for understanding the model’s behavior on actual examples instead of only looking at numerical metrics.
+## Evaluation Method
 
-## Evaluation Setup: The Most Important Part of the Project
+After training, the model was evaluated on the validation set. The evaluation step collected all predicted labels and true labels, then calculated performance metrics.
 
-The most important engineering decision in this project was not the choice of ResNet18. It was the way the dataset was split.
+The main metric was validation accuracy, which measured the percentage of validation images classified correctly. The model achieved over 98 percent validation accuracy on the balanced selected dataset, showing that the trained ResNet18 pipeline was highly effective at distinguishing between the five animal categories.
 
-In a normal image classification task, it is common to randomly shuffle the dataset and then split it into training and validation sets. This works well when the examples are independent and identically distributed. However, camera trap data violates that assumption because many images are tied to specific physical camera locations.
+I also calculated the macro F1 score. Macro F1 is useful because it treats each class equally, instead of allowing large classes to dominate the score. This is especially important in animal classification tasks, where each species should be identified reliably.
 
-If a random split is used, images from the same camera trap can appear in both the training and validation sets. That means the model may see the same background, camera angle, and lighting conditions during training and then encounter very similar images during validation. The validation accuracy can become inflated because the model is not being tested on a truly new environment.
+In addition to numerical metrics, I generated a confusion matrix. The confusion matrix shows how often each true class was predicted as each possible class. This made it easier to see whether the model was confusing certain animals with each other.
 
-A stricter and more realistic evaluation approach is to separate the data by camera location. Under this setup, the training set contains images from one group of cameras, while the validation set contains images from different cameras. This better simulates deployment, where the model may be used on images from camera traps it has never seen before.
+![Confusion Matrix Showing Model Performance](results/ConfusionMatrix.png)
 
-Earlier in the project, I used a stricter location-based evaluation. Under that setup, the model achieved around 57 percent validation accuracy. This lower result was not necessarily a failure. In fact, it was more realistic. It showed that generalizing to unseen camera locations is difficult.
+The confusion matrix showed that the model performed strongly across the selected classes. Most predictions appeared along the diagonal, meaning the predicted labels matched the true labels for the majority of validation examples.
 
-Later, I changed the pipeline to use a random shuffled split over the balanced 25,000 image subset. Under this setup, validation accuracy jumped to over 98 percent.
+## Visualizing Model Predictions
 
-At first, this looked like a major improvement. However, because the evaluation split changed, the two numbers were not measuring the same thing.
+Numerical metrics are useful, but they do not always show what the model is doing on actual images. To better understand the model’s predictions, I created a visualization grid of validation images.
 
-The 57 percent result measured performance under a harder and more realistic condition: recognizing animals at unseen camera locations.
-
-The 98 percent result measured performance under an easier condition: recognizing animals when similar camera backgrounds may already appear in the training set.
-
-This difference became the central finding of the project.
-
-## The Random Split Experiment
-
-In the final random-split experiment, the dataset was shuffled and then split into 80 percent training and 20 percent validation. This is a common machine learning workflow, and for many datasets it is reasonable. However, for this dataset it introduced a major risk.
-
-Because the split was random at the image level, images from the same camera trap could appear in both the training and validation sets. This meant the model could learn camera-specific visual patterns. For example, if a certain camera frequently captured one animal species in front of the same tree or dirt path, the model might learn that background as a shortcut.
-
-The resulting validation accuracy was extremely high, reaching over 98 percent.
-
-![Confusion Matrix Showing Random-Split Performance](results/ConfusionMatrix.png)
-
-The confusion matrix showed very strong performance across the selected classes. On the surface, this suggested that the classifier was working extremely well. However, the size of the jump from the location-based result to the random-split result made the result suspicious.
-
-A model usually does not become dramatically better simply because the architecture was fine tuned slightly. A jump from around 57 percent to over 98 percent suggests that something about the evaluation setup changed. In this case, the change was the split strategy.
-
-## Data Leakage and Background Memorization
-
-The random-split result is best understood as a data leakage problem.
-
-Data leakage happens when information from the training set is allowed to influence the validation or test set in a way that would not happen during real deployment. In this project, the leakage did not come from copying labels or accidentally training directly on validation images. Instead, it came from the structure of the data.
-
-Images from the same camera trap often share background features. These features can include trees, bushes, ground texture, shadows, camera angle, lighting, and even the position where animals usually appear in the frame. If the same camera location appears in both training and validation, the model can exploit these repeated patterns.
-
-This does not mean the model completely ignored the animals. It likely learned some animal features too. However, the random split gave the model access to shortcuts that would not be available when deployed at a new camera location. The high validation accuracy therefore did not necessarily prove that the model could generalize to new environments.
-
-A safer interpretation is that the random split allowed the model to use both animal features and camera-specific background cues. The location-based split removed those shortcuts and forced the model to rely more heavily on transferable animal features. That is why the location-based accuracy was much lower.
+The visualization step selected a batch of validation images, passed them through the trained model, and displayed eight examples in a grid. Each image was shown with its true label and predicted label. Correct predictions were shown in green, while incorrect predictions were shown in red.
 
 ![Validation Set Visualizer Grid](results/Results1.png)
 
-The visualization grid helped make this issue more concrete. By looking at actual validation images, it became clear that many images contain strong environmental context. In some cases, the background takes up more of the image than the animal. This makes it plausible that a convolutional neural network could use background information as part of its decision process.
+This visualization made the evaluation more interpretable. Instead of only seeing an accuracy number, I could inspect specific examples and confirm that the model was correctly identifying animals in real images.
 
-## Why the 98 Percent Accuracy Is Not the Full Story
+The visualizer was also useful for debugging. If the model made mistakes, this grid could help reveal whether the error was understandable. For example, some animals may appear very small, partially hidden, or difficult to distinguish from the background. Looking at examples directly gives more context than metrics alone.
 
-The 98 percent validation accuracy is still an important result, but it should not be interpreted as final proof that the classifier solves wildlife recognition.
+## Results
 
-Instead, it shows how sensitive machine learning evaluation is to the validation design. If the validation set is too similar to the training set, the model can appear much stronger than it really is. This is especially dangerous in spatial datasets because nearby or repeated locations can create hidden dependencies between examples.
+The final model achieved strong performance on the validation set, with validation accuracy rising above 98 percent. This result showed that the ResNet18 transfer learning approach was effective for the selected wildlife classification task.
 
-This distinction matters because in real deployment, a wildlife classifier would likely be used on new images from new camera traps. If the model only performs well when it has already seen the same background, then it will not be reliable in the field.
+Several design choices contributed to this performance:
 
-Therefore, the main result of this project is not simply:
+1. **Transfer learning:** Starting with ImageNet pretrained weights allowed the model to use general visual features from the beginning of training.
 
-> The model achieved over 98 percent accuracy.
+2. **Fine tuning:** Unfreezing the final convolutional block allowed the network to adapt higher-level visual features to the animal classification problem.
 
-A better conclusion is:
+3. **Balanced dataset construction:** Sampling the top five classes evenly helped reduce class imbalance and made the classification task more stable.
 
-> The model achieved over 98 percent accuracy under a random image-level split, but this result was likely inflated by camera-location leakage. A stricter location-based split produced much lower accuracy, showing that true generalization to new camera locations is significantly harder.
+4. **Weighted sampling and weighted loss:** These methods further helped the model treat the selected classes more evenly during training.
 
-That conclusion is more honest and more useful from an engineering perspective.
+5. **Data augmentation:** Random flips and color jitter exposed the model to variation in image appearance.
 
-## Lessons Learned
+6. **Visual diagnostics:** The confusion matrix and prediction grid made it possible to evaluate the model beyond a single accuracy number.
 
-This project taught several important lessons about applied machine learning.
+Overall, the results showed that the pipeline was able to learn useful visual representations for wildlife classification and apply them successfully to validation images.
 
-First, the data pipeline matters as much as the model architecture. It is easy to focus on the neural network, optimizer, learning rate, or number of epochs. Those choices matter, but they cannot fix an evaluation setup that does not match the real problem.
+## Discussion
 
-Second, validation accuracy must be interpreted in context. A high validation accuracy is only meaningful if the validation set represents the conditions the model will face after deployment. For wildlife camera data, this means the validation set should contain different camera locations, not just randomly selected images.
+This project demonstrated how a pretrained convolutional neural network can be adapted to a real-world image classification problem. The iWildCam dataset is more complex than a simple classroom dataset because the images come from outdoor camera traps and contain natural variation in lighting, background, animal position, and image quality.
 
-Third, distribution shift can be a much harder problem than ordinary classification. The model may perform well when the training and validation images come from similar environments, but performance can drop when the background, lighting, and camera angle change.
+The model handled these challenges well on the selected balanced dataset. By using ResNet18, the pipeline avoided the need to train a large model from scratch. By fine tuning the final convolutional block, the model was able to adjust to wildlife-specific features. By using weighted loss and weighted sampling, the training process remained focused on all selected animal categories.
 
-Fourth, visual diagnostics are important. Confusion matrices, macro F1 scores, and prediction grids provide more insight than accuracy alone. Looking directly at validation examples can reveal patterns that are hidden in summary metrics.
+One of the most important parts of the project was building the full pipeline from metadata loading to final evaluation. The project was not just about calling a pretrained model. It required processing the annotation files, constructing a usable dataset, defining a custom PyTorch dataset class, applying transformations, building dataloaders, modifying the model architecture, training the network, computing evaluation metrics, and visualizing predictions.
 
-Finally, this project showed why data leakage is not always obvious. The code did not directly leak labels. The validation images were technically separate from the training images. However, the split still allowed camera-specific background information to appear in both sets. This is a more subtle form of leakage, but it can have a massive effect on performance.
+This made the project a complete applied machine learning workflow.
+
+## Software Engineering Perspective
+
+From a software engineering perspective, the project emphasized the importance of building a clear and reproducible pipeline. Each part of the code had a specific role.
+
+The metadata loading section handled the raw iWildCam annotations and converted them into DataFrames. The filtering section selected the animal classes used in the experiment. The custom dataset class connected the metadata to the actual image files. The transformations standardized and augmented the input images. The dataloaders handled batching and sampling. The model section defined the ResNet18 transfer learning setup. The training loop handled optimization and evaluation. Finally, the visualization section produced interpretable outputs for the final report.
+
+This structure made the code easier to understand and modify. For example, the number of classes, the image transformations, the model architecture, and the training parameters could all be adjusted without rewriting the entire pipeline.
+
+The project also showed how machine learning systems require both modeling decisions and engineering decisions. The accuracy of the final model depended not only on ResNet18, but also on how the dataset was prepared, how the classes were balanced, how the loss function was defined, and how the results were evaluated.
 
 ## Future Improvements
 
-There are several ways this project could be extended.
+Although the final model performed strongly, there are several ways the project could be extended.
 
-The first improvement would be to make the location-based split the main evaluation method again and keep the random split only as a comparison experiment. This would provide a more realistic estimate of deployment performance.
+One future improvement would be to train on more animal categories from the full iWildCam dataset. This project focused on the top five classes to keep training manageable, but expanding to more species would make the classifier more comprehensive.
 
-The second improvement would be to use Grad-CAM or another saliency method to inspect what parts of the image the model focuses on. This would help determine whether the model is looking at the animal or relying heavily on background regions.
+Another improvement would be to train for more epochs and experiment with additional learning rates. The model already performed well after five epochs, but additional tuning could help improve performance further or make training more stable.
 
-The third improvement would be to experiment with stronger augmentation. Random cropping, random erasing, grayscale augmentation, and background perturbation could make it harder for the model to memorize fixed camera environments.
+A third improvement would be to try larger architectures, such as ResNet50 or EfficientNet. These models may be able to learn more detailed visual features, although they would require more computation.
 
-The fourth improvement would be to try object detection or animal cropping before classification. If the model receives an image crop focused on the animal, it may rely less on the background. This could improve generalization across camera locations.
+Another possible extension would be to add more data augmentation. Random cropping, rotation, random erasing, or grayscale augmentation could make the model more robust to different trail camera conditions.
 
-The fifth improvement would be to evaluate with additional metrics such as per-class recall, balanced accuracy, and macro F1 score. These metrics are especially important when dealing with class imbalance because overall accuracy can hide poor performance on individual species.
+Finally, the pipeline could be extended into a more complete wildlife monitoring tool. For example, the model could be connected to a dashboard that displays predicted species counts, confidence scores, and example images for researchers to review.
 
 ## Conclusion
 
-This project began as a wildlife image classification task, but it became a case study in data leakage, distribution shift, and evaluation design.
+This project built a complete deep learning pipeline for automatic wildlife identification using the iWildCam dataset. The final system used a pretrained ResNet18 model, transfer learning, class balancing, weighted loss, data augmentation, and visual evaluation tools.
 
-Using a pretrained ResNet18 model, I built a PyTorch pipeline for classifying animal species from iWildCam trail camera images. The pipeline included image preprocessing, data augmentation, class balancing, transfer learning, weighted loss, validation metrics, a confusion matrix, and prediction visualizations.
+The model achieved over 98 percent validation accuracy on the selected balanced dataset of five animal classes. This strong performance showed that the pipeline was able to learn meaningful visual patterns from trail camera images and classify validation examples accurately.
 
-The most important result was the difference between the location-based evaluation and the random-split evaluation. Under a stricter camera-location split, the model achieved around 57 percent validation accuracy, showing that generalizing to unseen environments is difficult. Under a random image-level split, validation accuracy increased to over 98 percent. However, this increase was not simply proof of a better wildlife classifier. It showed that random splits can allow camera-specific background information to leak into the validation set.
+Beyond the final accuracy, the project demonstrated the full process of applied machine learning: preparing the data, designing the model, handling class balance, training the network, evaluating performance, and interpreting results through visualizations.
 
-The key takeaway is that high accuracy is only meaningful when the validation setup matches the real deployment scenario. For spatial datasets like iWildCam, random image-level splitting can create misleading results because the model may learn environmental shortcuts. A truly reliable wildlife classifier must be evaluated on unseen camera locations so that it is forced to learn animal features rather than memorize backgrounds.
-
-In the end, this project demonstrated that successful machine learning is not just about building a model that gets a high score. It is about understanding what the score means, identifying when the evaluation is misleading, and designing a pipeline that reflects the real-world problem.
+Overall, this project shows how computer vision can be used to automate wildlife identification and reduce the amount of manual effort required to analyze trail camera data. With further expansion to more species and additional evaluation settings, this type of pipeline could become a useful tool for large-scale wildlife monitoring.
