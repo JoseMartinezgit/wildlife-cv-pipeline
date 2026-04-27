@@ -106,7 +106,7 @@ In addition to numerical metrics, we generated a confusion matrix. The confusion
 
 ![Confusion Matrix Showing Model Performance](results/ConfusionMatrix.png)
 
-The confusion matrix showed that the model performed strongly across the selected classes. Most predictions appeared along the diagonal, meaning the predicted labels matched the true labels for the majority of validation examples. Some of the remaining mistakes occurred between visually similar species, such as the crassow and the turkey. This mix-up makes sense because both animals are medium-sized ground birds with similar body shapes, posture, and visual features in trail camera images. In some photos, lighting, distance, motion blur, or partial occlusion can make these species harder to distinguish. These errors show that the model learned the main visual patterns for each class, but still struggled occasionally when two animals shared similar physical characteristics.
+The confusion matrix showed that the model performed strongly across the selected classes. Most predictions appeared along the diagonal, meaning the predicted labels matched the true labels for the majority of validation examples. Some of the remaining mistakes occurred between visually similar species, such as the curassow and the turkey. This mix-up makes sense because both animals are medium-sized ground birds with similar body shapes, posture, and visual features in trail camera images. In some photos, lighting, distance, motion blur, or partial occlusion can make these species harder to distinguish. These errors show that the model learned the main visual patterns for each class, but still struggled occasionally when two animals shared similar physical characteristics.
 
 ## Visualizing Model Predictions
 
