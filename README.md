@@ -173,20 +173,6 @@ This structure made the code easier to understand and modify. For example, the n
 
 The project also showed how machine learning systems require both modeling decisions and engineering decisions. The performance of the final model depended not only on the neural network architecture, but also on how the dataset was prepared, how the classes were balanced, how the loss function was defined, and how the results were evaluated.
 
-## Future Improvements
-
-Although the final model performed strongly, there are several ways the project could be extended.
-
-One future improvement would be to train on more animal categories from the full iWildCam dataset. This project focused on classes with enough data to support meaningful training and validation, but expanding to more species would make the classifier more comprehensive.
-
-Another improvement would be to train for more epochs and experiment with additional learning rates. The model already performed well, but additional tuning could help improve performance further or make training more stable.
-
-A third improvement would be to try larger architectures. Larger models may be able to learn more detailed visual features, although they would require more computation.
-
-Another possible extension would be to add more data augmentation. Random erasing, stronger cropping, grayscale augmentation, and additional brightness variation could make the model more robust to difficult trail camera conditions.
-
-Finally, the pipeline could be extended into a more complete wildlife monitoring tool. For example, the model could be connected to a dashboard that displays predicted species counts, confidence scores, and example images for researchers to review.
-
 ## Conclusion
 
 This project developed a complete deep learning pipeline for automatic wildlife identification using the iWildCam dataset. The final system used a pretrained convolutional neural network, transfer learning, class balancing, weighted loss, data augmentation, and visual evaluation tools.
