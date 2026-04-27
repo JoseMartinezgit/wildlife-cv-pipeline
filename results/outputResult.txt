@@ -13,3 +13,32 @@ Epoch 5/5 Train Loss: 0.0132 Acc: 0.9960 Val Loss: 0.0138 Acc: 0.9964
 Evaluating on Validation Set...
 
 Validation Macro-F1 Score: 0.9952
+
+New/Extended: 
+Using device: cuda:0
+Loading metadata...
+Successfully loaded 45000 images across 15 classes: ['empty', 'tayassu pecari', 'dasyprocta punctata', 'puma concolor', 'leopardus pardalis', 'panthera onca', 'bos taurus', 'loxodonta africana', 'aepyceros melampus', 'madoqua guentheri', 'cephalophus nigrifrons', 'urocyon cinereoargenteus', 'meleagris ocellata', 'crax rubra', 'mazama temama']
+
+Epoch 1/5
+Train Loss: 0.9816 Acc: 0.6677
+Val Loss: 0.5697 Acc: 0.8087
+
+Epoch 2/5
+Train Loss: 0.5853 Acc: 0.7937
+Val Loss: 0.4681 Acc: 0.8418
+
+Epoch 3/5
+Train Loss: 0.4897 Acc: 0.8322
+Val Loss: 0.4010 Acc: 0.8583
+
+Epoch 4/5
+Train Loss: 0.4113 Acc: 0.8546
+Val Loss: 0.3518 Acc: 0.8748
+
+Epoch 5/5
+Train Loss: 0.3707 Acc: 0.8701
+Val Loss: 0.3068 Acc: 0.8952
+
+Evaluating on Validation Set...
+
+Validation Macro-F1 Score: 0.8955
