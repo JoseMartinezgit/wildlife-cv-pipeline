@@ -148,8 +148,6 @@ Our model handled these challenges well on the selected balanced dataset. By usi
 
 One of the most important parts of the project was building the full pipeline from metadata loading to final evaluation. The project was not just about calling a pretrained model. It required processing the annotation files, constructing a usable dataset, defining a custom PyTorch dataset class, applying transformations, building dataloaders, modifying the model architecture, training the network, computing evaluation metrics, and visualizing predictions.
 
-This made the project a complete applied machine learning workflow.
-
 ## Software Engineering Perspective
 
 From a software engineering perspective, the project emphasized the importance of building a clear and reproducible pipeline. Each part of the code had a specific role.
