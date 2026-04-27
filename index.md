@@ -129,6 +129,8 @@ The visualization step selected batches of validation images, passed them throug
 
 ![Validation Set Visualizer Grid](results/Results3.png)
 
+![Validation Set Visualizer Grid](results/Results4.png)
+
 This visualization made the evaluation more interpretable. Instead of only seeing a metric such as Macro-F1, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
 
 The visualizer was also useful for understanding the model’s mistakes. Many of the incorrect predictions occurred on images where the animal was difficult to see because of darkness, glare, distance, or partial occlusion. This helped explain why the model made certain errors and showed that some mistakes were connected to real image quality challenges rather than a complete failure to learn the animal classes.
