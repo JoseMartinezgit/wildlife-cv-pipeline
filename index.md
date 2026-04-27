@@ -106,7 +106,7 @@ In addition to numerical metrics, we generated a confusion matrix. The confusion
 
 ![Confusion Matrix Showing Model Performance](results/ConfusionMatrix.png)
 
-The confusion matrix showed that the model performed strongly across the selected classes. Most predictions appeared along the diagonal, meaning the predicted labels matched the true labels for the majority of validation examples.
+The confusion matrix showed that the model performed strongly across the selected classes. Most predictions appeared along the diagonal, meaning the predicted labels matched the true labels for the majority of validation examples. Some of the remaining mistakes occurred between visually similar species, such as the crassow and the turkey. This mix-up makes sense because both animals are medium-sized ground birds with similar body shapes, posture, and visual features in trail camera images. In some photos, lighting, distance, motion blur, or partial occlusion can make these species harder to distinguish. These errors show that the model learned the main visual patterns for each class, but still struggled occasionally when two animals shared similar physical characteristics.
 
 ## Visualizing Model Predictions
 
@@ -116,9 +116,9 @@ The visualization step selected a batch of validation images, passed them throug
 
 ![Validation Set Visualizer Grid](results/Results1.png)
 
-This visualization made the evaluation more interpretable. Instead of only seeing an accuracy number, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
+![Validation Set Visualizer Grid](results/Results2.png)
 
-The visualizer was also useful for debugging. If the model made mistakes, this grid could help reveal whether the error was understandable. For example, some animals may appear very small, partially hidden, or difficult to distinguish from the background. Looking at examples directly gives more context than metrics alone.
+This visualization made the evaluation more interpretable. Instead of only seeing an accuracy number, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
 
 ## Results
 
@@ -147,8 +147,6 @@ This project demonstrated how a pretrained convolutional neural network can be a
 Our model handled these challenges well on the selected balanced dataset. By using ResNet18, the pipeline avoided the need to train a large model from scratch. By fine tuning the final convolutional block, the model was able to adjust to wildlife-specific features. By using weighted loss and weighted sampling, the training process remained focused on all selected animal categories.
 
 One of the most important parts of the project was building the full pipeline from metadata loading to final evaluation. The project was not just about calling a pretrained model. It required processing the annotation files, constructing a usable dataset, defining a custom PyTorch dataset class, applying transformations, building dataloaders, modifying the model architecture, training the network, computing evaluation metrics, and visualizing predictions.
-
-This made the project a complete applied machine learning workflow.
 
 ## Software Engineering Perspective
 
