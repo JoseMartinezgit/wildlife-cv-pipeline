@@ -1,6 +1,6 @@
 # Automating Wildlife Identification with Deep Learning
 
-By [Team Member Names Here]
+By Jose A. Martinez, Andrew Choi, Pavan Patel, Seth Sandberg
 
 ## Introduction
 
