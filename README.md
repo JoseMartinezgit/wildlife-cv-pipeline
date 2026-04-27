@@ -10,7 +10,7 @@ However, the large number of images created by trail cameras also creates a majo
 
 For this project, our team built a computer vision pipeline using the iWildCam dataset. The goal was to classify animal species from trail camera images using a deep learning model. Our final system used transfer learning with a pretrained convolutional neural network, balanced data sampling, weighted loss, image augmentation, and validation visualizations to evaluate performance.
 
-Our model achieved strong validation performance, with a validation Macro-F1 score of 0.8344. This showed that our pipeline was able to learn meaningful visual patterns associated with the target animal classes and classify many validation images accurately, even under challenging trail camera conditions.
+Our model achieved strong validation performance, with a validation Macro-F1 score of 0.8955. This showed that our pipeline was able to learn meaningful visual patterns associated with the target animal classes and classify many validation images accurately, even under challenging trail camera conditions.
 
 ## Project Goal
 
@@ -103,7 +103,7 @@ After training, the model was evaluated on the validation set. The evaluation st
 
 One of the main metrics we used was Macro-F1. Macro-F1 is useful because it treats each class equally instead of allowing larger classes to dominate the score. This is especially important in animal classification tasks, where each species should be identified reliably.
 
-Our model achieved a validation Macro-F1 score of 0.8344. This indicates that the classifier performed strongly across the selected animal categories while still accounting for class-level performance.
+Our model achieved a validation Macro-F1 score of  0.8955. This indicates that the classifier performed strongly across the selected animal categories while still accounting for class-level performance.
 
 In addition to numerical metrics, we generated a confusion matrix. The confusion matrix shows how often each true class was predicted as each possible class. This made it easier to see whether the model was confusing certain animals with each other.
 
@@ -129,13 +129,15 @@ The visualization step selected batches of validation images, passed them throug
 
 ![Validation Set Visualizer Grid](results/Results3.png)
 
+![Validation Set Visualizer Grid](results/Results4.png)
+
 This visualization made the evaluation more interpretable. Instead of only seeing a metric such as Macro-F1, we could inspect specific examples and confirm that the model was correctly identifying animals in real images.
 
 The visualizer was also useful for understanding the model’s mistakes. Many of the incorrect predictions occurred on images where the animal was difficult to see because of darkness, glare, distance, or partial occlusion. This helped explain why the model made certain errors and showed that some mistakes were connected to real image quality challenges rather than a complete failure to learn the animal classes.
 
 ## Results
 
-The final model achieved strong performance on the validation set, with a validation Macro-F1 score of 0.8344. This result showed that the transfer learning approach was effective for the selected wildlife classification task.
+The final model achieved strong performance on the validation set, with a validation Macro-F1 score of  0.8955. This result showed that the transfer learning approach was effective for the selected wildlife classification task.
 
 Several design choices contributed to this performance:
 
@@ -177,7 +179,7 @@ The project also showed how machine learning systems require both modeling decis
 
 This project developed a complete deep learning pipeline for automatic wildlife identification using the iWildCam dataset. The final system used a pretrained convolutional neural network, transfer learning, class balancing, weighted loss, data augmentation, and visual evaluation tools.
 
-Our model achieved a validation Macro-F1 score of 0.8344 on the selected animal classes. This strong performance showed that the pipeline was able to learn meaningful visual patterns from trail camera images and classify many validation examples accurately.
+Our model achieved a validation Macro-F1 score of 0.8955 on the selected animal classes. This strong performance showed that the pipeline was able to learn meaningful visual patterns from trail camera images and classify many validation examples accurately.
 
 Beyond the final metric, the project demonstrated the full process of applied machine learning: preparing the data, designing the model, handling class balance, training the network, evaluating performance, and interpreting results through visualizations.
 
