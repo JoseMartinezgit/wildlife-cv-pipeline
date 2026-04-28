@@ -2,6 +2,8 @@
 
 By Jose A. Martinez, Andrew Choi, Pavan Patel, Seth Sandberg
 
+Video Explanation: https://youtu.be/LmTBfSZ5mBU
+
 ## Introduction
 
 Wildlife camera traps are an important tool for studying animal populations and monitoring natural environments. These cameras are placed in outdoor locations and automatically capture images when motion is detected. This makes them useful for collecting large amounts of wildlife data without requiring constant human observation.
